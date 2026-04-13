@@ -10,11 +10,11 @@
  * 
  */
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class MYPROJECT_API AInventoryComponent : public UActorComponent
+class MYPROJECT_API UInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
 public:
-    AInventoryComponent();
+    UInventoryComponent();
 
     // food in back
     UFUNCTION(BlueprintCallable, Category = "Inventory")

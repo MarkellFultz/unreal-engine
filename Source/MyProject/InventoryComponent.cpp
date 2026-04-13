@@ -1,36 +1,36 @@
 #include "InventoryComponent.h"
 
-AInventoryComponent::AInventoryComponent()
+UInventoryComponent::UInventoryComponent()
 {
-    AInventoryComponent.bCanEverTick = false;
+    PrimaryComponentTick.bCanEverTick = false;
 }
 
-void AInventoryComponent::AddIngredient(FName IngredientID)
+void UInventoryComponent::AddIngredient(FName IngredientID)
 {
     InventoryItems.Add(IngredientID);
-    UE_LOG(LogTemp, Warning, TEXT("Added %s to Inventory!"), *IngredientID.ToString());
+    // 修正點：將 \N 改為 \n (換行) 或直接移除，並使用簡單字串測試
+    UE_LOG(LogTemp, Warning, TEXT("Item Added: %s"), *IngredientID.ToString());
 }
 
-bool AInventoryComponent::RemoveIngredients(TArray<FName> IngredientsToRemove)
+bool UInventoryComponent::RemoveIngredients(TArray<FName> IngredientsToRemove)
 {
-    // 為了安全起見，先檢查是否有足夠的食材
     for (FName Item : IngredientsToRemove)
     {
         if (!InventoryItems.Contains(Item))
         {
-            return false; // 缺少食材，操作失敗
+            UE_LOG(LogTemp, Error, TEXT("Remove Failed: %s not found"), *Item.ToString());
+            return false;
         }
     }
 
-    // 確定都有之後再進行移除
     for (FName Item : IngredientsToRemove)
     {
-        InventoryItems.RemoveSingle(Item); // 只移除一個該名稱的食材
+        InventoryItems.RemoveSingle(Item);
     }
     return true;
 }
 
-TArray<FName> AInventoryComponent::GetInventoryItems() const
+TArray<FName> UInventoryComponent::GetInventoryItems() const
 {
     return InventoryItems;
 }

@@ -11,6 +11,7 @@ enum class ETutorialStep : uint8
 	Welcome         UMETA(DisplayName = "Welcome"),
 	Move            UMETA(DisplayName = "Move"),
 	GrabIngredient  UMETA(DisplayName = "Grab Ingredient"),
+	Backpack		UMETA(DisplayName = "Backpack"),
 	Chop            UMETA(DisplayName = "Chop"),
 	Cook            UMETA(DisplayName = "Cook"),
 	Serve           UMETA(DisplayName = "Serve"),

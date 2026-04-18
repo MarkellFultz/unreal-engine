@@ -11,10 +11,12 @@
 #include "TutorialManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "KismetProceduralMeshLibrary.h" // Added for UKismetProceduralMeshLibrary
-
+#include "Blueprint/UserWidget.h"
+#include "TutorialManager.h"
 AMyCharacter::AMyCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
+    InventoryComp = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComp"));
 }
 
 void AMyCharacter::BeginPlay()
@@ -35,7 +37,7 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
     // Bind interaction
     PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &AMyCharacter::OnInteract);
-
+    PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyCharacter::ToggleInventory);
     // Bind movement axes (Make sure these names match your Project Settings -> Input)
     PlayerInputComponent->BindAxis("MoveForward", this, &AMyCharacter::MoveForward);
     PlayerInputComponent->BindAxis("MoveRight", this, &AMyCharacter::MoveRight);
@@ -175,6 +177,44 @@ void AMyCharacter::SliceObject(UProceduralMeshComponent* TargetMesh, FVector Pla
         if (TutManager)
         {
             TutManager->CompleteStep(ETutorialStep::Chop);
+        }
+    }
+}
+void AMyCharacter::ToggleInventory()
+{
+    APlayerController* PC = Cast<APlayerController>(GetController());
+
+    if (InventoryWidgetInstance && InventoryWidgetInstance->IsInViewport())
+    {
+        InventoryWidgetInstance->RemoveFromParent();
+        InventoryWidgetInstance = nullptr;
+
+        if (PC)
+        {
+            PC->SetShowMouseCursor(false);
+            PC->SetInputMode(FInputModeGameOnly());
+        }
+    }
+    else if (InventoryWidgetClass)
+    {
+        InventoryWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), InventoryWidgetClass);
+        if (InventoryWidgetInstance)
+        {
+            InventoryWidgetInstance->AddToViewport();
+
+            ATutorialManager* TutManager = Cast<ATutorialManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ATutorialManager::StaticClass()));
+            if (TutManager)
+            {
+                TutManager->CompleteStep(ETutorialStep::Backpack);
+            }
+
+            if (PC)
+            {
+                PC->SetShowMouseCursor(true);
+                FInputModeGameAndUI InputMode;
+                InputMode.SetWidgetToFocus(InventoryWidgetInstance->TakeWidget());
+                PC->SetInputMode(InputMode);
+            }
         }
     }
 }

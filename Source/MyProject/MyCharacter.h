@@ -19,19 +19,21 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	void OnInteract();
+	void SliceObject(UProceduralMeshComponent* TargetMesh, FVector PlanePosition, FVector PlaneNormal);
+	void MoveForward(float Value);
+	void MoveRight(float Value);
+
 public:
 	virtual void Tick(float DeltaTime) override;
-
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-
-	void OnInteract();
-
-	void SliceObject(UProceduralMeshComponent* TargetMesh, FVector PlanePosition, FVector PlaneNormal);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slicing")
 	float TraceDistance = 500.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slicing")
 	UAnimMontage* CutMontage;
+
+private:
+	bool bHasCompletedMoveTutorial = false;
 };

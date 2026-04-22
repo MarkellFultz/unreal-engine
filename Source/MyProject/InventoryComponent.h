@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "MyCharacter.h"
+#include "Components/ActorComponent.h"
 #include "InventoryComponent.generated.h"
-
 /**
  * 
  */

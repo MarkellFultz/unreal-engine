@@ -140,7 +140,7 @@ struct FIngredientData : public FTableRowBase
     TSoftObjectPtr<UStaticMesh> IngredientMesh; // 3D  (Soft Pointer)
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ingredient|Gameplay")
-    bool bIsSliceable; // 
+    bool IsSliceable; // 
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ingredient|Gameplay")
     float TotalCookTime; // 

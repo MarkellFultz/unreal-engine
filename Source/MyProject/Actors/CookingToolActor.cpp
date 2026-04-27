@@ -56,6 +56,7 @@ void ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> Sele
 
 			// 重置計數器並開始第一次隨機觸發
 			QTECount = 0;
+			SuccessfulQTECount = 0; // 👈 新增這行：每次煮飯前把成功次數歸零
 			TriggerRandomQTE();
 		}
 	}
@@ -100,21 +101,8 @@ void ACookingToolActor::TriggerRandomQTE()
 
 void ACookingToolActor::FinishCooking()
 {
-	// 解除玩家的移動鎖定
-	if (CurrentInteractor)
-	{
-		AMyCharacter* MyChar = Cast<AMyCharacter>(CurrentInteractor);
-		if (MyChar)
-		{
-			APlayerController* PC = Cast<APlayerController>(MyChar->GetController());
-			if (PC)
-			{
-				PC->SetIgnoreMoveInput(false); // 解除鎖定移動
-				PC->SetIgnoreLookInput(false); // 👈 新增這行：解除鎖定視角
-			}
-		}
-	}
+	// 呼叫藍圖事件，傳出成功次數，讓鍋子去顯示結算畫面！
+	OnCookingFinished(SuccessfulQTECount);
 
-	// 這裡可以加上產生料理的邏輯
 	UE_LOG(LogTemp, Warning, TEXT("烹飪完成！"));
 }

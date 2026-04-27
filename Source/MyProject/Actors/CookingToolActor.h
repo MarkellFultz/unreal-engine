@@ -46,7 +46,12 @@ protected:
 
 	UPROPERTY()
 	int32 QTECount = 0;
+	UPROPERTY(BlueprintReadWrite, Category = "QTE")
+	int32 SuccessfulQTECount = 0;
 
+	// 👇 烹飪結束時，通知藍圖彈出結算畫面的事件
+	UFUNCTION(BlueprintImplementableEvent, Category = "Cooking")
+	void OnCookingFinished(int32 FinalSuccessCount);
 	UPROPERTY()
 	AActor* CurrentInteractor;
 

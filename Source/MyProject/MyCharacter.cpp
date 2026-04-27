@@ -1,4 +1,4 @@
-#include "MyCharacter.h"
+﻿#include "MyCharacter.h"
 #include "Components/InputComponent.h"
 #include "Engine/World.h"
 #include "Camera/CameraComponent.h"
@@ -13,6 +13,7 @@
 #include "KismetProceduralMeshLibrary.h" // Added for UKismetProceduralMeshLibrary
 #include "Blueprint/UserWidget.h"
 #include "TutorialManager.h"
+#include "QTEComponent.h"
 AMyCharacter::AMyCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -22,7 +23,11 @@ AMyCharacter::AMyCharacter()
 void AMyCharacter::BeginPlay()
 {
     Super::BeginPlay();
-
+    // 👇 測試用：遊戲一開始就給玩家一個雞肉
+    if (InventoryComp)
+    {
+        InventoryComp->AddIngredient(FName("Ing_Chicken"));
+    }
 
 }
 
@@ -41,6 +46,7 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
     // Bind movement axes (Make sure these names match your Project Settings -> Input)
     PlayerInputComponent->BindAxis("MoveForward", this, &AMyCharacter::MoveForward);
     PlayerInputComponent->BindAxis("MoveRight", this, &AMyCharacter::MoveRight);
+    PlayerInputComponent->BindAction("QTEAction", IE_Pressed, this, &AMyCharacter::OnQTEPressed);
 }
 
 void AMyCharacter::MoveForward(float Value)
@@ -63,7 +69,7 @@ void AMyCharacter::MoveForward(float Value)
             }
             else
             {
-                GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("2. err Tutorial Manager�I"));
+                GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("2. err Tutorial Manager！"));
             }
         }*/
         // Apply movement
@@ -217,4 +223,70 @@ void AMyCharacter::ToggleInventory()
             }
         }
     }
+}
+AActor* AMyCharacter::GetCurrentInteractable()
+{
+    APlayerCameraManager* CamManager = GetWorld()->GetFirstPlayerController()->PlayerCameraManager;
+    if (!CamManager) return nullptr;
+
+    FVector Start = CamManager->GetCameraLocation();
+    FVector End = Start + (CamManager->GetCameraRotation().Vector() * TraceDistance);
+
+    FHitResult HitResult;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params))
+    {
+        return HitResult.GetActor();
+    }
+    return nullptr;
+}
+
+void AMyCharacter::OnQTEPressed()
+{
+    AActor* InteractionTarget = GetCurrentInteractable();
+
+    if (InteractionTarget)
+    {
+        UQTEComponent* QTEComp = InteractionTarget->FindComponentByClass<UQTEComponent>();
+        if (QTEComp && QTEComp->IsQTEActive())
+        {
+            QTEComp->AttemptHit();
+        }
+    }
+}
+void AMyCharacter::SetUIInputMode(bool bIsUIMode)
+{
+    APlayerController* PC = Cast<APlayerController>(GetController());
+    if (!PC) return;
+
+    if (bIsUIMode)
+    {
+        // 切換到 UI 模式：顯示滑鼠，允許 UI 互動
+        FInputModeGameAndUI InputMode;
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        PC->SetInputMode(InputMode);
+        PC->bShowMouseCursor = true;
+    }
+    else
+    {
+        // 切換回遊戲模式：隱藏滑鼠，恢復視角旋轉
+        FInputModeGameOnly InputMode;
+        PC->SetInputMode(InputMode);
+        PC->bShowMouseCursor = false;
+    }
+}
+void AMyCharacter::Jump()
+{
+    APlayerController* PC = Cast<APlayerController>(GetController());
+
+    // 如果玩家的移動被鎖定（代表正在煮飯或看 UI），就不允許跳躍！
+    if (PC && PC->IsMoveInputIgnored())
+    {
+        return;
+    }
+
+    // 否則就執行原本正常的跳躍
+    Super::Jump();
 }

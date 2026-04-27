@@ -3,35 +3,31 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MyCharacter.h"
 #include "Components/ActorComponent.h"
 #include "InventoryComponent.generated.h"
-/**
- * 
- */
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class MYPROJECT_API UInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
+
 public:
-    UInventoryComponent();
+	UInventoryComponent();
 
-    // food in back
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    void AddIngredient(FName IngredientID);
+	// 加入食材到背包
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void AddIngredient(FName IngredientID);
 
-    // remove food (on tool
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool RemoveIngredients(TArray<FName> IngredientsToRemove);
+	// 消耗(移除)指定的食材陣列，若成功刪除則回傳 true
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool ConsumeIngredients(TArray<FName> IngredientsToRemove);
 
-    // get food 
-    UFUNCTION(BlueprintPure, Category = "Inventory")
-    TArray<FName> GetInventoryItems() const;
+	// 取得背包內所有食材
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	TArray<FName> GetInventoryItems() const;
 
 protected:
-    // restore food ID array
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
-    TArray<FName> InventoryItems;
+	// 儲存食材 ID 的陣列
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TArray<FName> InventoryItems;
 };
-
-

@@ -47,6 +47,11 @@ void ATutorialManager::CompleteStep(ETutorialStep StepCompleted)
 			FinishTutorial();
 		}
 	}
+	if (StepCompleted == ETutorialStep::Backpack)
+	{
+		// 如果下一步是進入烹飪並觸發 QTE
+		UE_LOG(LogTemp, Warning, TEXT("即將開啟指針監測儀表板..."));
+	}
 }
 
 void ATutorialManager::FinishTutorial()

@@ -1,6 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
@@ -31,9 +29,15 @@ protected:
 
 	void SliceObject(UProceduralMeshComponent* TargetMesh, FVector PlanePosition, FVector PlaneNormal);
 
+	// 👇 新增 QTE 與互動抓取函式宣告
+	void OnQTEPressed();
+	class AActor* GetCurrentInteractable();
+
 public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	virtual void Jump() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
 	UInventoryComponent* InventoryComp;
@@ -44,19 +48,23 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slicing")
 	UAnimMontage* CutMontage;
 
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
 	UDataTable* IngredientDataTable;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-	TSubclassOf<UUserWidget> InventoryWidgetClass;
-
-	UPROPERTY()
-	UUserWidget* InventoryWidgetInstance;
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void ToggleInventory();
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void ToggleInventory();
+	void SetUIInputMode(bool bIsUIMode);
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<class UUserWidget> InventoryWidgetClass;
+
+	UPROPERTY()
+	class UUserWidget* InventoryWidgetInstance;
 
 private:
 	bool bHasCompletedMoveTutorial = false;
+	bool bHasCompletedInventoryTutorial = false;
 };

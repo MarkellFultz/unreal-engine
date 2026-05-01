@@ -26,6 +26,11 @@ void ACookingToolActor::Interact(AActor* Interactor)
 	OnOpenCookingUI(Interactor);
 }
 
+FText ACookingToolActor::GetInteractPrompt() const
+{
+	return FText::FromString(TEXT("[E] 放入食材"));
+}
+
 // ⚠️ 確保整個檔案只有這一個 AcceptIngredients
 void ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> SelectedItems)
 {

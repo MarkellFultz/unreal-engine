@@ -15,6 +15,7 @@ class MYPROJECT_API ACookingToolActor : public AActor, public IInteractInterface
 public:
 	ACookingToolActor();
 	virtual void Interact(AActor* Interactor) override;
+	virtual FText GetInteractPrompt() const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Cooking")
 	void AcceptIngredients(AActor* Interactor, TArray<FName> SelectedItems);

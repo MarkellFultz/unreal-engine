@@ -19,6 +19,7 @@ public:
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void Interact(AActor* Interactor) override;
+	virtual FText GetInteractPrompt() const override;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ingredient")

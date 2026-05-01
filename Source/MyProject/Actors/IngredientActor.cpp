@@ -24,6 +24,11 @@ void AIngredientActor::OnConstruction(const FTransform& Transform)
 		}
 	}
 }
+FText AIngredientActor::GetInteractPrompt() const
+{
+	return FText::FromString(TEXT("[E] 撿取食材"));
+}
+
 void AIngredientActor::Interact(AActor* Interactor)
 {
 	if (Interactor)

@@ -10,10 +10,10 @@
 #include "Actors/CookingToolActor.h"
 #include "TutorialManager.h"
 #include "Kismet/GameplayStatics.h"
-#include "KismetProceduralMeshLibrary.h" // Added for UKismetProceduralMeshLibrary
+#include "KismetProceduralMeshLibrary.h"
 #include "Blueprint/UserWidget.h"
-#include "TutorialManager.h"
 #include "QTEComponent.h"
+
 AMyCharacter::AMyCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -23,208 +23,52 @@ AMyCharacter::AMyCharacter()
 void AMyCharacter::BeginPlay()
 {
     Super::BeginPlay();
-    // 👇 測試用：遊戲一開始就給玩家一個雞肉
+
+    // Initial inventory setup for testing
     if (InventoryComp)
     {
         InventoryComp->AddIngredient(FName("Ing_Chicken"));
     }
-
 }
 
 void AMyCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
+    // 互動提示文字改由 HUD Blueprint Binding 呼叫 GetCurrentInteractPromptText() 取得
 }
 
 void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-    // Bind interaction
-    PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &AMyCharacter::OnInteract);
-    PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyCharacter::ToggleInventory);
-    // Bind movement axes (Make sure these names match your Project Settings -> Input)
+    // Movement Bindings
     PlayerInputComponent->BindAxis("MoveForward", this, &AMyCharacter::MoveForward);
     PlayerInputComponent->BindAxis("MoveRight", this, &AMyCharacter::MoveRight);
-    PlayerInputComponent->BindAction("QTEAction", IE_Pressed, this, &AMyCharacter::OnQTEPressed);
+    PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
+    PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+
+    // Action Bindings
+    PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMyCharacter::Jump);
+    PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &AMyCharacter::OnInteract);
+    PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyCharacter::ToggleInventory);
+    PlayerInputComponent->BindAction("QTEKey", IE_Pressed, this, &AMyCharacter::OnQTEPressed);
 }
 
-void AMyCharacter::MoveForward(float Value)
+FText AMyCharacter::GetCurrentInteractPromptText() const
 {
+    // 每次 HUD Binding 執行時做一次射線，直接回傳提示文字
+    AActor* HitActor = GetCurrentInteractable();
+    IInteractInterface* Interactable = Cast<IInteractInterface>(HitActor);
 
-    if (Value != 0.0f)
+    if (Interactable)
     {
-        /*if (!bHasCompletedMoveTutorial)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Orange, TEXT("1. 0.0..."));
-
-            ATutorialManager* TutManager = Cast<ATutorialManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ATutorialManager::StaticClass()));
-
-            if (TutManager)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("2. find CompleteStep(Move)"));
-
-                TutManager->CompleteStep(ETutorialStep::Move);
-                bHasCompletedMoveTutorial = true; 
-            }
-            else
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("2. err Tutorial Manager！"));
-            }
-        }*/
-        // Apply movement
-        AddMovementInput(GetActorForwardVector(), Value);
-
-        // Check and trigger the movement tutorial step
-        if (!bHasCompletedMoveTutorial)
-        {
-            bHasCompletedMoveTutorial = true; // Lock the flag immediately
-
-            ATutorialManager* TutManager = Cast<ATutorialManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ATutorialManager::StaticClass()));
-            if (TutManager)
-            {
-                TutManager->CompleteStep(ETutorialStep::Move);
-            }
-        }
+        return Interactable->GetInteractPrompt();
     }
+    return FText::GetEmpty();
 }
 
-void AMyCharacter::MoveRight(float Value)
-{
-    if (Value != 0.0f)
-    {
-        // Apply movement
-        AddMovementInput(GetActorRightVector(), Value);
-
-        // Check and trigger the movement tutorial step (Handles cases where player presses A/D first)
-        if (!bHasCompletedMoveTutorial)
-        {
-            bHasCompletedMoveTutorial = true; // Lock the flag immediately
-
-            ATutorialManager* TutManager = Cast<ATutorialManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ATutorialManager::StaticClass()));
-            if (TutManager)
-            {
-                TutManager->CompleteStep(ETutorialStep::Move);
-            }
-        }
-    }
-}
-
-void AMyCharacter::OnInteract()
-{
-    if (CutMontage)
-    {
-        PlayAnimMontage(CutMontage);
-    }
-
-    APlayerCameraManager* CamManager = GetWorld()->GetFirstPlayerController()->PlayerCameraManager;
-    FVector Start = CamManager->GetCameraLocation();
-    FRotator Rotation = CamManager->GetCameraRotation();
-    FVector End = Start + (Rotation.Vector() * TraceDistance);
-
-    FHitResult HitResult;
-    FCollisionQueryParams Params;
-    Params.AddIgnoredActor(this);
-
-    /*DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 3.0f, 0, 0.5f);*/
-
-    if (GetWorld() && GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, Params))
-    {
-        AActor* HitActor = HitResult.GetActor();
-        if (HitActor)
-        {
-            IInteractInterface* Interactable = Cast<IInteractInterface>(HitActor);
-            if (Interactable)
-            {
-                Interactable->Interact(this);
-                return;
-            }
-
-            if (HitActor->ActorHasTag(FName("Sliceable")))
-            {
-                UProceduralMeshComponent* ProcMesh = Cast<UProceduralMeshComponent>(HitActor->GetComponentByClass(UProceduralMeshComponent::StaticClass()));
-                if (ProcMesh)
-                {
-                    SliceObject(ProcMesh, HitResult.ImpactPoint, GetActorRightVector());
-                }
-            }
-        }
-    }
-}
-
-void AMyCharacter::SliceObject(UProceduralMeshComponent* TargetMesh, FVector PlanePosition, FVector PlaneNormal)
-{
-    if (!TargetMesh)
-    {
-        return;
-    }
-
-    UProceduralMeshComponent* OtherHalfMesh = nullptr;
-    UMaterialInterface* InsideMaterial = TargetMesh->GetMaterial(1);
-    if (!InsideMaterial)
-    {
-        InsideMaterial = TargetMesh->GetMaterial(0);
-    }
-
-    UKismetProceduralMeshLibrary::SliceProceduralMesh(
-        TargetMesh, PlanePosition, PlaneNormal, true, OtherHalfMesh,
-        EProcMeshSliceCapOption::CreateNewSectionForCap, InsideMaterial
-    );
-
-    TargetMesh->SetSimulatePhysics(true);
-    if (OtherHalfMesh)
-    {
-        OtherHalfMesh->SetSimulatePhysics(true);
-        OtherHalfMesh->SetCollisionProfileName(TEXT("BlockAll"));
-        OtherHalfMesh->AddImpulse(PlaneNormal * 150.f, NAME_None, true);
-        TargetMesh->AddImpulse(PlaneNormal * -150.f, NAME_None, true);
-
-        ATutorialManager* TutManager = Cast<ATutorialManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ATutorialManager::StaticClass()));
-        if (TutManager)
-        {
-            TutManager->CompleteStep(ETutorialStep::Chop);
-        }
-    }
-}
-void AMyCharacter::ToggleInventory()
-{
-    APlayerController* PC = Cast<APlayerController>(GetController());
-
-    if (InventoryWidgetInstance && InventoryWidgetInstance->IsInViewport())
-    {
-        InventoryWidgetInstance->RemoveFromParent();
-        InventoryWidgetInstance = nullptr;
-
-        if (PC)
-        {
-            PC->SetShowMouseCursor(false);
-            PC->SetInputMode(FInputModeGameOnly());
-        }
-    }
-    else if (InventoryWidgetClass)
-    {
-        InventoryWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), InventoryWidgetClass);
-        if (InventoryWidgetInstance)
-        {
-            InventoryWidgetInstance->AddToViewport();
-
-            ATutorialManager* TutManager = Cast<ATutorialManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ATutorialManager::StaticClass()));
-            if (TutManager)
-            {
-                TutManager->CompleteStep(ETutorialStep::Backpack);
-            }
-
-            if (PC)
-            {
-                PC->SetShowMouseCursor(true);
-                FInputModeGameAndUI InputMode;
-                InputMode.SetWidgetToFocus(InventoryWidgetInstance->TakeWidget());
-                PC->SetInputMode(InputMode);
-            }
-        }
-    }
-}
-AActor* AMyCharacter::GetCurrentInteractable()
+AActor* AMyCharacter::GetCurrentInteractable() const
 {
     APlayerCameraManager* CamManager = GetWorld()->GetFirstPlayerController()->PlayerCameraManager;
     if (!CamManager) return nullptr;
@@ -243,10 +87,30 @@ AActor* AMyCharacter::GetCurrentInteractable()
     return nullptr;
 }
 
+void AMyCharacter::OnInteract()
+{
+    AActor* Target = GetCurrentInteractable();
+    if (!Target) return;
+
+    // Prioritize Slicing logic (Original implementation)
+    UProceduralMeshComponent* HitMesh = Cast<UProceduralMeshComponent>(Target->GetRootComponent());
+    if (HitMesh && HitMesh->ComponentTags.Contains("Sliceable"))
+    {
+        SliceObject(HitMesh, Target->GetActorLocation(), GetActorForwardVector());
+        return;
+    }
+
+    // Then handle Interface-based interaction (NPCs, Tools, etc.)
+    IInteractInterface* Interactable = Cast<IInteractInterface>(Target);
+    if (Interactable)
+    {
+        Interactable->Interact(this);
+    }
+}
+
 void AMyCharacter::OnQTEPressed()
 {
     AActor* InteractionTarget = GetCurrentInteractable();
-
     if (InteractionTarget)
     {
         UQTEComponent* QTEComp = InteractionTarget->FindComponentByClass<UQTEComponent>();
@@ -256,6 +120,32 @@ void AMyCharacter::OnQTEPressed()
         }
     }
 }
+
+void AMyCharacter::ToggleInventory()
+{
+    APlayerController* PC = Cast<APlayerController>(GetController());
+
+    if (InventoryWidgetInstance && InventoryWidgetInstance->IsInViewport())
+    {
+        InventoryWidgetInstance->RemoveFromParent();
+        InventoryWidgetInstance = nullptr;
+        SetUIInputMode(false);
+    }
+    else if (InventoryWidgetClass)
+    {
+        InventoryWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), InventoryWidgetClass);
+        if (InventoryWidgetInstance)
+        {
+            InventoryWidgetInstance->AddToViewport();
+            SetUIInputMode(true);
+
+            // Tutorial progress tracking
+            ATutorialManager* TutManager = Cast<ATutorialManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ATutorialManager::StaticClass()));
+            if (TutManager) TutManager->CompleteStep(ETutorialStep::Backpack);
+        }
+    }
+}
+
 void AMyCharacter::SetUIInputMode(bool bIsUIMode)
 {
     APlayerController* PC = Cast<APlayerController>(GetController());
@@ -263,7 +153,6 @@ void AMyCharacter::SetUIInputMode(bool bIsUIMode)
 
     if (bIsUIMode)
     {
-        // 切換到 UI 模式：顯示滑鼠，允許 UI 互動
         FInputModeGameAndUI InputMode;
         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
         PC->SetInputMode(InputMode);
@@ -271,22 +160,20 @@ void AMyCharacter::SetUIInputMode(bool bIsUIMode)
     }
     else
     {
-        // 切換回遊戲模式：隱藏滑鼠，恢復視角旋轉
-        FInputModeGameOnly InputMode;
-        PC->SetInputMode(InputMode);
+        PC->SetInputMode(FInputModeGameOnly());
         PC->bShowMouseCursor = false;
     }
 }
-void AMyCharacter::Jump()
+
+// Basic movement and slicing implementations
+void AMyCharacter::MoveForward(float Value) { AddMovementInput(GetActorForwardVector(), Value); }
+void AMyCharacter::MoveRight(float Value) { AddMovementInput(GetActorRightVector(), Value); }
+void AMyCharacter::Jump() { Super::Jump(); }
+
+void AMyCharacter::SliceObject(UProceduralMeshComponent* TargetMesh, FVector PlanePosition, FVector PlaneNormal)
 {
-    APlayerController* PC = Cast<APlayerController>(GetController());
-
-    // 如果玩家的移動被鎖定（代表正在煮飯或看 UI），就不允許跳躍！
-    if (PC && PC->IsMoveInputIgnored())
-    {
-        return;
-    }
-
-    // 否則就執行原本正常的跳躍
-    Super::Jump();
+    if (!TargetMesh) return;
+    UProceduralMeshComponent* OutHalfMesh;
+    UKismetProceduralMeshLibrary::SliceProceduralMesh(TargetMesh, PlanePosition, PlaneNormal, true, OutHalfMesh, EProcMeshSliceCapOption::CreateNewSectionForCap, nullptr);
+    if (OutHalfMesh) OutHalfMesh->SetSimulatePhysics(true);
 }

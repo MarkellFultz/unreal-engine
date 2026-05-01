@@ -108,6 +108,21 @@ void ACookingToolActor::FinishCooking()
 {
 	// 呼叫藍圖事件，傳出成功次數，讓鍋子去顯示結算畫面！
 	OnCookingFinished(SuccessfulQTECount);
+	if (CurrentInteractor)
+	{
+		AMyCharacter* MyChar = Cast<AMyCharacter>(CurrentInteractor);
+		if (MyChar)
+		{
+			APlayerController* PC = Cast<APlayerController>(MyChar->GetController());
+			if (PC)
+			{
+				// 解鎖移動與視角
+				PC->SetIgnoreMoveInput(false);
+				PC->SetIgnoreLookInput(false);
+			}
 
+			// 確保回到遊戲模式 (關閉鼠標)
+		}
+	}
 	UE_LOG(LogTemp, Warning, TEXT("烹飪完成！"));
 }

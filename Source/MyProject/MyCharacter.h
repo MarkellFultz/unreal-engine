@@ -29,7 +29,7 @@ protected:
 	void OnInteract();
 	void OnQTEPressed();
 	void SliceObject(UProceduralMeshComponent* TargetMesh, FVector PlanePosition, FVector PlaneNormal);
-
+	void OnQTEPressedAxis(float Value);
 	
 	/** 取得目前準心對準物件的互動提示文字，供 Blueprint Binding 使用 (User Story 3.1-1) */
 	class AActor* GetCurrentInteractable() const;

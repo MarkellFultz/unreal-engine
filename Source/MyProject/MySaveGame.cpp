@@ -3,4 +3,5 @@
 UMySaveGame::UMySaveGame()
 {
 	bHasCompletedTutorial = false;
+	MouseSensitivity = 1.0f;
 }

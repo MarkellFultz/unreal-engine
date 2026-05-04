@@ -37,31 +37,38 @@ void ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> Sele
 	if (Interactor && SelectedItems.Num() > 0)
 	{
 		UInventoryComponent* Inv = Interactor->FindComponentByClass<UInventoryComponent>();
-
 		if (Inv && Inv->ConsumeIngredients(SelectedItems))
 		{
 			StoredIngredients.Append(SelectedItems);
-
-			// 記住玩家是誰
 			CurrentInteractor = Interactor;
 
-			// 鎖定玩家移動
 			AMyCharacter* MyChar = Cast<AMyCharacter>(Interactor);
 			if (MyChar)
 			{
-				MyChar->SetUIInputMode(false); // 收回滑鼠
+				// 1. 關閉 UI 模式 (這會隱藏游標，但同時也會短暫解鎖玩家的移動限制)
+				MyChar->SetUIInputMode(false);
 
+				// 2. 獲取控制器，進行 QTE 專屬的鎖定
 				APlayerController* PC = Cast<APlayerController>(MyChar->GetController());
 				if (PC)
 				{
-					PC->SetIgnoreMoveInput(true); // 鎖定移動
-					PC->SetIgnoreLookInput(true); // 👈 新增這行：鎖定視角旋轉，防止射線歪掉！
+					// 鎖死移動與視角轉動！
+					PC->SetIgnoreMoveInput(true);
+					PC->SetIgnoreLookInput(true);
+
+					// [新增體驗升級]：計算玩家與鍋子之間的向量，強制將鏡頭對準鍋子
+					FVector DirectionToPot = GetActorLocation() - MyChar->GetActorLocation();
+					DirectionToPot.Z = 0.0f; // 保持視角水平，避免玩家突然低頭或抬頭
+					FRotator TargetRotation = DirectionToPot.Rotation();
+
+					// 同時轉動玩家控制器與角色實體
+					PC->SetControlRotation(TargetRotation);
+					MyChar->SetActorRotation(TargetRotation);
 				}
 			}
 
-			// 重置計數器並開始第一次隨機觸發
 			QTECount = 0;
-			SuccessfulQTECount = 0; // 👈 新增這行：每次煮飯前把成功次數歸零
+			SuccessfulQTECount = 0;
 			TriggerRandomQTE();
 		}
 	}
@@ -106,23 +113,20 @@ void ACookingToolActor::TriggerRandomQTE()
 
 void ACookingToolActor::FinishCooking()
 {
-	// 呼叫藍圖事件，傳出成功次數，讓鍋子去顯示結算畫面！
-	OnCookingFinished(SuccessfulQTECount);
+	// 確保有互動者可以設定狀態
 	if (CurrentInteractor)
 	{
 		AMyCharacter* MyChar = Cast<AMyCharacter>(CurrentInteractor);
 		if (MyChar)
 		{
-			APlayerController* PC = Cast<APlayerController>(MyChar->GetController());
-			if (PC)
-			{
-				// 解鎖移動與視角
-				PC->SetIgnoreMoveInput(false);
-				PC->SetIgnoreLookInput(false);
-			}
-
-			// 確保回到遊戲模式 (關閉鼠標)
+			// [重點修改] 料理結束後，進入 UI 模式！
+			// 這會自動顯示滑鼠游標，並且因為我們之前寫好的邏輯，玩家依然會被鎖定無法移動。
+			MyChar->SetUIInputMode(true);
 		}
 	}
-	UE_LOG(LogTemp, Warning, TEXT("烹飪完成！"));
+
+	// 執行藍圖的料理結束事件 (這會觸發你的藍圖去生成結算畫面 UI)
+	OnCookingFinished(SuccessfulQTECount);
+
+	UE_LOG(LogTemp, Warning, TEXT("料理結束，已顯示滑鼠，等待玩家點擊結算畫面"));
 }

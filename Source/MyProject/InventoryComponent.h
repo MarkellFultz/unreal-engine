@@ -25,7 +25,8 @@ public:
 	// 取得背包內所有食材
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	TArray<FName> GetInventoryItems() const;
-
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool RemoveIngredient(FName ItemID);
 protected:
 	// 儲存食材 ID 的陣列
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")

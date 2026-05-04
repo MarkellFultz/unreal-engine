@@ -39,3 +39,38 @@ TArray<FName> UInventoryComponent::GetInventoryItems() const
 {
 	return InventoryItems;
 }
+bool UInventoryComponent::RemoveIngredient(FName ItemID)
+{
+    // 1. 檢查背包裡有沒有這個東西
+    if (InventoryItems.Contains(ItemID))
+    {
+        // 2. 如果有，就扣除「一個」，然後印出成功訊息，回傳 true
+        InventoryItems.RemoveSingle(ItemID);
+
+        // 使用英文印出成功訊息，避免編碼問題
+        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, FString::Printf(TEXT("Success! Removed: %s"), *ItemID.ToString()));
+        return true;
+    }
+
+    // 3. 如果沒有，先印出我們「試圖尋找卻找不到」的 ID
+    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, FString::Printf(TEXT("Failed! Cannot find: [%s]"), *ItemID.ToString()));
+
+    // 4. 【透視鏡功能】：把背包裡目前所有的東西都印出來讓我們檢查！
+    FString InventoryList = TEXT("Current Inventory Contains: ");
+    if (InventoryItems.Num() == 0)
+    {
+        InventoryList += TEXT("EMPTY (Nothing in bag!)");
+    }
+    else
+    {
+        for (const FName& Item : InventoryItems)
+        {
+            InventoryList += TEXT("[") + Item.ToString() + TEXT("] ");
+        }
+    }
+
+    // 印出黃色的背包清單
+    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, InventoryList);
+
+    return false;
+}

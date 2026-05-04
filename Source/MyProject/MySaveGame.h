@@ -14,4 +14,6 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Tutorial")
 	bool bHasCompletedTutorial;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Player Settings")
+	float MouseSensitivity;
 };

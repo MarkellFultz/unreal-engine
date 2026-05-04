@@ -12,6 +12,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "KismetProceduralMeshLibrary.h"
 #include "Blueprint/UserWidget.h"
+#include "Actors/CuttingBoardActor.h"
 #include "QTEComponent.h"
 
 AMyCharacter::AMyCharacter()
@@ -52,6 +53,7 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMyCharacter::Jump);
     PlayerInputComponent->BindAction("Interact", IE_Pressed, this, &AMyCharacter::OnInteract);
     PlayerInputComponent->BindAction("Inventory", IE_Pressed, this, &AMyCharacter::ToggleInventory);
+    PlayerInputComponent->BindAction("PrimaryAction", IE_Pressed, this, &AMyCharacter::OnLeftMousePressed);
 }
 
 // --- 修改後的 Jump 函數：攔截跳躍並執行判定 ---
@@ -69,24 +71,28 @@ void AMyCharacter::Jump()
 
     Super::Jump(); // 正常狀態下執行跳躍
 }
-
+void AMyCharacter::OnLeftMousePressed()
+{
+    // 利用原本就寫好的射線函數，取得目前注視的物件
+    AActor* InteractionTarget = GetCurrentInteractable();
+    if (InteractionTarget)
+    {
+        // 嘗試將目標轉型為砧板 (ACuttingBoardActor)
+        ACuttingBoardActor* CuttingBoard = Cast<ACuttingBoardActor>(InteractionTarget);
+        if (CuttingBoard)
+        {
+            // 如果確實看著砧板，呼叫執行切片
+            CuttingBoard->ExecuteCut();
+        }
+    }
+}
 void AMyCharacter::OnInteract()
 {
     AActor* Target = GetCurrentInteractable();
     if (!Target) return;
 
-    TArray<UProceduralMeshComponent*> ProcMeshes;
-    Target->GetComponents<UProceduralMeshComponent>(ProcMeshes);
-
-    for (UProceduralMeshComponent* ProcMesh : ProcMeshes)
-    {
-        if (ProcMesh && ProcMesh->ComponentTags.Contains("Sliceable"))
-        {
-            SliceObject(ProcMesh, Target->GetActorLocation(), GetActorForwardVector());
-            return;
-        }
-    }
-
+    // 直接轉交給介面處理！
+    // 不管是砧板、鍋子還是其他東西，只要有繼承 IInteractInterface，就會在這裡被觸發！
     IInteractInterface* Interactable = Cast<IInteractInterface>(Target);
     if (Interactable)
     {
@@ -144,50 +150,71 @@ AActor* AMyCharacter::GetCurrentInteractable() const
 
 void AMyCharacter::ToggleInventory()
 {
+    // 1. 如果背包是角色自己在平時走路打開的，優先關閉它
     if (InventoryWidgetInstance && InventoryWidgetInstance->IsInViewport())
     {
         InventoryWidgetInstance->RemoveFromParent();
         InventoryWidgetInstance = nullptr;
         SetUIInputMode(false);
+        return; // 執行關閉後直接結束
     }
-    else if (InventoryWidgetClass)
+
+    // 2. [新增的攔截邏輯]：檢查目前是否已經因為砧板或鍋具而處於 UI 模式
+    APlayerController* PC = Cast<APlayerController>(GetController());
+    if (PC && PC->IsMoveInputIgnored())
+    {
+        // 如果移動已被鎖定，代表藍圖已經幫忙開好介面了。
+        // 我們在這裡直接返回，不執行下方的新建邏輯，防止產生兩層 UI！
+        // 關閉的任務會自動交給 UI 藍圖裡的 OnKeyDown (Tab) 處理。
+        return;
+    }
+
+    // 3. 正常開啟背包 (平時走在路上按 Tab 的情況)
+    if (InventoryWidgetClass)
     {
         InventoryWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), InventoryWidgetClass);
         if (InventoryWidgetInstance)
         {
             InventoryWidgetInstance->AddToViewport();
             SetUIInputMode(true);
+
+            // 教學步驟追蹤
             ATutorialManager* TutManager = Cast<ATutorialManager>(UGameplayStatics::GetActorOfClass(GetWorld(), ATutorialManager::StaticClass()));
             if (TutManager) TutManager->CompleteStep(ETutorialStep::Backpack);
         }
     }
 }
 
+// 切換 UI/遊戲 輸入模式與鎖定移動
 void AMyCharacter::SetUIInputMode(bool bIsUIMode)
 {
     APlayerController* PC = Cast<APlayerController>(GetController());
     if (!PC) return;
+
     if (bIsUIMode)
     {
+        // 進入 UI 模式，顯示滑鼠並上鎖 (計數器 +1)
         FInputModeGameAndUI InputMode;
         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
         PC->SetInputMode(InputMode);
         PC->bShowMouseCursor = true;
+
+        PC->SetIgnoreMoveInput(true);
+        PC->SetIgnoreLookInput(true);
     }
     else
     {
+        // 退出 UI 模式，隱藏滑鼠
         PC->SetInputMode(FInputModeGameOnly());
         PC->bShowMouseCursor = false;
+
+        // [關鍵修改] 使用 Reset 強制歸零，取代原本的 false！
+        // 這樣無論前面經過鍋子、砧板疊加了幾次鎖定，都會瞬間全部解開！
+        PC->ResetIgnoreMoveInput();
+        PC->ResetIgnoreLookInput();
     }
 }
 
 void AMyCharacter::MoveForward(float Value) { AddMovementInput(GetActorForwardVector(), Value); }
 void AMyCharacter::MoveRight(float Value) { AddMovementInput(GetActorRightVector(), Value); }
 
-void AMyCharacter::SliceObject(UProceduralMeshComponent* TargetMesh, FVector PlanePosition, FVector PlaneNormal)
-{
-    if (!TargetMesh) return;
-    UProceduralMeshComponent* OutHalfMesh;
-    UKismetProceduralMeshLibrary::SliceProceduralMesh(TargetMesh, PlanePosition, PlaneNormal, true, OutHalfMesh, EProcMeshSliceCapOption::CreateNewSectionForCap, nullptr);
-    if (OutHalfMesh) OutHalfMesh->SetSimulatePhysics(true);
-}

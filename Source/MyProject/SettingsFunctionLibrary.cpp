@@ -185,3 +185,24 @@ void USettingsFunctionLibrary::ForceApplyInputSettings(const UObject* WorldConte
         }
     }
 }
+void USettingsFunctionLibrary::GetNutritionProgressData(float Current, float Target, float& OutProgressBarRatio, FString& OutPercentageText)
+{
+    // 防呆機制：如果顧客沒有該項需求 (分母為0)，或是數值異常
+    if (Target <= 0.0f)
+    {
+        OutProgressBarRatio = 0.0f;
+        OutPercentageText = TEXT("0%");
+        return;
+    }
+
+    // 計算實際比例
+    float Ratio = Current / Target;
+
+    // 1. 進度條專用：ProgressBar 只能接受 0.0 到 1.0 的數值，用 Clamp 限制住
+    OutProgressBarRatio = FMath::Clamp(Ratio, 0.0f, 1.0f);
+
+    // 2. 文字專用：將比例轉換為整數百分比 (例如 0.756 -> 76%)
+    // 即使超過 100%，文字依然可以顯示真實數值 (如 120%) 讓玩家知道超標了
+    int32 PercentInt = FMath::RoundToInt(Ratio * 100.0f);
+    OutPercentageText = FString::Printf(TEXT("%d%%"), PercentInt);
+}

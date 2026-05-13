@@ -10,6 +10,7 @@ void UInventoryComponent::AddIngredient(FName IngredientID)
 	InventoryItems.Add(IngredientID);
 	// 修正點：將 \N 改為 \n (換行) 或直接移除，並使用簡單字串測試
 	UE_LOG(LogTemp, Warning, TEXT("Item Added: %s"), *IngredientID.ToString());
+    OnInventoryChanged.Broadcast();
 }
 
 // 配合上一步的修改，改名為 ConsumeIngredients 徹底避開名稱衝突
@@ -32,7 +33,8 @@ bool UInventoryComponent::ConsumeIngredients(TArray<FName> IngredientsToRemove)
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Ingredients consumed successfully."));
-	return true;
+    OnInventoryChanged.Broadcast();
+    return true;
 }
 
 TArray<FName> UInventoryComponent::GetInventoryItems() const
@@ -49,6 +51,7 @@ bool UInventoryComponent::RemoveIngredient(FName ItemID)
 
         // 使用英文印出成功訊息，避免編碼問題
         if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, FString::Printf(TEXT("Success! Removed: %s"), *ItemID.ToString()));
+        OnInventoryChanged.Broadcast();
         return true;
     }
 

@@ -63,4 +63,16 @@ public:
     static void QuitTheGame(const UObject* WorldContextObject);
     UFUNCTION(BlueprintCallable, Category = "Game Settings|Input")
     static void ForceApplyInputSettings(const UObject* WorldContextObject);
+    // ==========================================
+    // 5. 遊戲邏輯與 UI 輔助
+    // ==========================================
+
+    /** * 計算營養素進度條比例與顯示文字
+     * @param Current 當前備料區的數值 (分子)
+     * @param Target 顧客的需求數值 (分母)
+     * @param OutProgressBarRatio 輸出給 ProgressBar 的數值 (自動限制在 0.0 ~ 1.0)
+     * @param OutPercentageText 輸出給 TextBlock 的文字 (例如 "75%")
+     */
+    UFUNCTION(BlueprintPure, Category = "Game Logic|UI")
+    static void GetNutritionProgressData(float Current, float Target, float& OutProgressBarRatio, FString& OutPercentageText);
 };

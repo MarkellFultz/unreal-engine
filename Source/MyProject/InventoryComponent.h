@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "InventoryComponent.generated.h"
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChangedSignature);
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class MYPROJECT_API UInventoryComponent : public UActorComponent
 {
@@ -13,7 +13,8 @@ class MYPROJECT_API UInventoryComponent : public UActorComponent
 
 public:
 	UInventoryComponent();
-
+	UPROPERTY(BlueprintAssignable, Category = "Inventory|Events")
+	FOnInventoryChangedSignature OnInventoryChanged;
 	// 加入食材到背包
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void AddIngredient(FName IngredientID);

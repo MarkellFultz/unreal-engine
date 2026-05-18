@@ -33,6 +33,9 @@ protected:
 	/** 取得目前準心對準物件的互動提示文字，供 Blueprint Binding 使用 (User Story 3.1-1) */
 	class AActor* GetCurrentInteractable() const;
 	void OnLeftMousePressed();
+	// 記錄是否允許進入下一階段
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Progress")
+	bool bCanEnterCookingStage = false;
 public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -72,4 +75,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void SetUIInputMode(bool bIsUIMode);
+	UFUNCTION(BlueprintCallable, Category = "Progress")
+	void CheckRecipeIngredients(TArray<FName> CurrentInventory, TArray<FName> RequiredIngredients);
+	// 讓門讀取用的函數
+	UFUNCTION(BlueprintPure, Category = "Progress")
+	bool GetCanEnterCookingStage() const { return bCanEnterCookingStage; }
 };

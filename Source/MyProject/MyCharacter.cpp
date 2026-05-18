@@ -218,3 +218,46 @@ void AMyCharacter::SetUIInputMode(bool bIsUIMode)
 void AMyCharacter::MoveForward(float Value) { AddMovementInput(GetActorForwardVector(), Value); }
 void AMyCharacter::MoveRight(float Value) { AddMovementInput(GetActorRightVector(), Value); }
 
+void AMyCharacter::CheckRecipeIngredients(TArray<FName> CurrentInventory, TArray<FName> RequiredIngredients)
+{
+    // 防呆：如果食譜沒有設定必要食材，直接拒絕開門
+    if (RequiredIngredients.Num() == 0)
+    {
+        bCanEnterCookingStage = false;
+        if (GEngine) GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Red, TEXT("❌ 錯誤：食譜沒有設定任何必要食材！"));
+        return;
+    }
+
+    // 預設為 true (先假設玩家很乖都有拿)
+    bool bHasAllIngredients = true;
+
+    // 準備一個字串，用來印出玩家到底還缺什麼，方便我們偵錯！
+    FString MissingItems = TEXT("");
+
+    // ==========================================
+    // 核心邏輯：遍歷「食譜需求名單」，檢查是不是每一個都在玩家包包裡
+    // ==========================================
+    for (const FName& ReqItem : RequiredIngredients)
+    {
+        // 如果玩家包包裡「沒有 ( ! )」這個需求食材
+        if (!CurrentInventory.Contains(ReqItem))
+        {
+            bHasAllIngredients = false; // 抓到了！沒拿齊！
+            MissingItems += ReqItem.ToString() + TEXT(" "); // 把缺少的食材記下來
+        }
+    }
+
+    // 把最後的檢查結果交給玩家的通行證
+    bCanEnterCookingStage = bHasAllIngredients;
+
+    // 印出超詳細的偵錯文字，讓你知道到底發生了什麼事
+    if (bHasAllIngredients)
+    {
+        if (GEngine) GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Green, TEXT("✅ 食譜所需食材已全數集齊！大門解鎖！"));
+    }
+    else
+    {
+        // 如果沒齊，會精準印出還差哪幾個食材
+        if (GEngine) GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Orange, FString::Printf(TEXT("⚠️ 尚未達標！還缺少食材: %s"), *MissingItems));
+    }
+}

@@ -1,15 +1,12 @@
 ﻿#include "CookingToolActor.h"
-#include "Components/StaticMeshComponent.h" // 解決 StaticMeshComponent 紅線
-#include "Engine/World.h"                   // 解決 GetWorld() 紅線
-#include "TimerManager.h"                   // 解決 Timer 相關紅線
-#include "Kismet/KismetMathLibrary.h"       // 解決隨機數紅線
-#include "Kismet/GameplayStatics.h"         // 解決教學管理員紅線
+#include "Components/StaticMeshComponent.h" 
+#include "Engine/World.h"                   
+#include "TimerManager.h"                   
+#include "Kismet/KismetMathLibrary.h"       
+#include "Kismet/GameplayStatics.h"         
 #include "../InventoryComponent.h"
 #include "../QTEComponent.h" 
 #include "../MyCharacter.h"
-#include "../TutorialManager.h"
-
-// 下面接著你的 ACookingToolActor::ACookingToolActor() ...
 
 ACookingToolActor::ACookingToolActor()
 {
@@ -19,6 +16,14 @@ ACookingToolActor::ACookingToolActor()
 
 	// 初始化 QTE 組件
 	QTEComp = CreateDefaultSubobject<UQTEComponent>(TEXT("QTEComp"));
+
+	// 建立俯視相機
+	TopDownCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
+	TopDownCamera->SetupAttachment(RootComponent);
+
+	// ====== ✨【調整參數】：預設高度直接從 150 挪高到 250，視野更廣 ======
+	TopDownCamera->SetRelativeLocation(FVector(0.0f, 0.0f, 250.0f));
+	TopDownCamera->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
 }
 
 void ACookingToolActor::Interact(AActor* Interactor)
@@ -31,46 +36,101 @@ FText ACookingToolActor::GetInteractPrompt() const
 	return FText::FromString(TEXT("[E] 放入食材"));
 }
 
-// ⚠️ 確保整個檔案只有這一個 AcceptIngredients
 void ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> SelectedItems)
 {
-	if (Interactor && SelectedItems.Num() > 0)
+	if (!Interactor || SelectedItems.Num() == 0) return;
+
+	// ==========================================
+	// 🛑【新功能】：安全檢測機制
+	// 只有 IsSliceable == false 的食材才能進行烹飪互動！
+	// ==========================================
+	if (IngredientDataTable)
 	{
-		UInventoryComponent* Inv = Interactor->FindComponentByClass<UInventoryComponent>();
-		if (Inv && Inv->ConsumeIngredients(SelectedItems))
+		for (FName ItemID : SelectedItems)
 		{
-			StoredIngredients.Append(SelectedItems);
-			CurrentInteractor = Interactor;
-
-			AMyCharacter* MyChar = Cast<AMyCharacter>(Interactor);
-			if (MyChar)
+			FIngredientData* Data = IngredientDataTable->FindRow<FIngredientData>(ItemID, TEXT("CookingToolCheck"));
+			if (Data && Data->IsSliceable)
 			{
-				// 1. 關閉 UI 模式 (這會隱藏游標，但同時也會短暫解鎖玩家的移動限制)
-				MyChar->SetUIInputMode(false);
+				// 只要發現有任何一個需要切的食材，立刻無情拒絕！
+				FString ErrorMsg = FString::Printf(TEXT("❌ 拒絕烹飪：[%s] 還需要切片！請先去砧板處理。"), *ItemID.ToString());
+				if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Red, ErrorMsg);
 
-				// 2. 獲取控制器，進行 QTE 專屬的鎖定
-				APlayerController* PC = Cast<APlayerController>(MyChar->GetController());
-				if (PC)
+				AMyCharacter* MyChar = Cast<AMyCharacter>(Interactor);
+				if (MyChar) MyChar->SetUIInputMode(false); // 關閉 UI 模式恢復玩家控制
+				return; // 直接中斷整個函數，不扣除也不開伙
+			}
+		}
+	}
+	else
+	{
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Red, TEXT("❌ 嚴重錯誤：廚具未綁定 IngredientDataTable，無法進行安全驗證！"));
+		return;
+	}
+	// ==========================================
+
+	UInventoryComponent* Inv = Interactor->FindComponentByClass<UInventoryComponent>();
+	if (Inv && Inv->ConsumeIngredients(SelectedItems))
+	{
+		StoredIngredients.Append(SelectedItems);
+		CurrentInteractor = Interactor;
+
+		// 在鍋具上動態生成並固定食材模型
+		if (IngredientDataTable)
+		{
+			for (int32 Index = 0; Index < SelectedItems.Num(); ++Index)
+			{
+				FName ItemID = SelectedItems[Index];
+				FIngredientData* Data = IngredientDataTable->FindRow<FIngredientData>(ItemID, TEXT("CookingTool"));
+
+				if (Data && !Data->IngredientMesh.IsNull())
 				{
-					// 鎖死移動與視角轉動！
-					PC->SetIgnoreMoveInput(true);
-					PC->SetIgnoreLookInput(true);
+					UStaticMesh* LoadedMesh = Data->IngredientMesh.LoadSynchronous();
+					if (LoadedMesh)
+					{
+						UStaticMeshComponent* NewMeshComp = NewObject<UStaticMeshComponent>(this, NAME_None);
+						NewMeshComp->RegisterComponent();
 
-					// [新增體驗升級]：計算玩家與鍋子之間的向量，強制將鏡頭對準鍋子
-					FVector DirectionToPot = GetActorLocation() - MyChar->GetActorLocation();
-					DirectionToPot.Z = 0.0f; // 保持視角水平，避免玩家突然低頭或抬頭
-					FRotator TargetRotation = DirectionToPot.Rotation();
+						// ✨【附加規則修正】：使用 SnapToTarget 強制將座標歸零到鍋子中心
+						NewMeshComp->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+						NewMeshComp->SetStaticMesh(LoadedMesh);
 
-					// 同時轉動玩家控制器與角色實體
-					PC->SetControlRotation(TargetRotation);
-					MyChar->SetActorRotation(TargetRotation);
+						NewMeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+						NewMeshComp->SetGenerateOverlapEvents(false);
+
+						// 食材隨機散落堆疊
+						float RandomX = FMath::RandRange(-15.0f, 15.0f);
+						float RandomY = FMath::RandRange(-15.0f, 15.0f);
+						// ✨【基礎高度修正】：調高到 25.0f 確保模型不會陷進鍋底
+						float ZOffset = 25.0f + (Index * 5.0f);
+
+						NewMeshComp->SetRelativeLocation(FVector(RandomX, RandomY, ZOffset));
+						NewMeshComp->SetRelativeRotation(FRotator(0.0f, FMath::RandRange(0.0f, 360.0f), 0.0f));
+
+						DisplayedIngredientMeshes.Add(NewMeshComp);
+					}
 				}
 			}
-
-			QTECount = 0;
-			SuccessfulQTECount = 0;
-			TriggerRandomQTE();
 		}
+
+		AMyCharacter* MyChar = Cast<AMyCharacter>(Interactor);
+		if (MyChar)
+		{
+			MyChar->SetUIInputMode(false);
+
+			APlayerController* PC = Cast<APlayerController>(MyChar->GetController());
+			if (PC)
+			{
+				PC->SetIgnoreMoveInput(true);
+				PC->SetIgnoreLookInput(true);
+
+				// 平滑融合切換至廚具上方的相機 (0.5秒)
+				PC->SetViewTargetWithBlend(this, 0.5f, EViewTargetBlendFunction::VTBlend_Cubic);
+			}
+		}
+
+		QTECount = 0;
+		SuccessfulQTECount = 0;
+		TriggerRandomQTE();
 	}
 }
 
@@ -78,32 +138,25 @@ void ACookingToolActor::TriggerRandomQTE()
 {
 	if (QTECount >= 3)
 	{
-		// 已經觸發過 3 次了，結束烹飪
 		FinishCooking();
 		return;
 	}
 
-	// 產生 1.0 ~ 3.0 秒之間的隨機延遲
 	float RandomDelay = UKismetMathLibrary::RandomFloatInRange(1.0f, 3.0f);
 
-	// 設定計時器，時間到就執行 Lambda 函式來啟動 QTE
 	GetWorld()->GetTimerManager().SetTimer(
 		QTE_TimerHandle,
 		[this]()
 		{
 			if (QTEComp)
 			{
-				// 👇 1. 產生 0 到 300 度之間的隨機起點
 				float RandomStart = UKismetMathLibrary::RandomFloatInRange(0.0f, 300.0f);
-
-				// 👇 2. 設定黃金區間的範圍為 60 度 (你可以自己調整難度)
 				float RandomEnd = RandomStart + 60.0f;
 
-				// 👇 3. 把隨機數傳進去！
 				QTEComp->StartQTE(RandomStart, RandomEnd, 150.0f);
 
 				OnQTEStarted();
-				QTECount++; // 次數 +1
+				QTECount++;
 			}
 		},
 		RandomDelay,
@@ -113,20 +166,52 @@ void ACookingToolActor::TriggerRandomQTE()
 
 void ACookingToolActor::FinishCooking()
 {
-	// 確保有互動者可以設定狀態
 	if (CurrentInteractor)
 	{
 		AMyCharacter* MyChar = Cast<AMyCharacter>(CurrentInteractor);
 		if (MyChar)
 		{
-			// [重點修改] 料理結束後，進入 UI 模式！
-			// 這會自動顯示滑鼠游標，並且因為我們之前寫好的邏輯，玩家依然會被鎖定無法移動。
 			MyChar->SetUIInputMode(true);
+
+			// 視角復原
+			APlayerController* PC = Cast<APlayerController>(MyChar->GetController());
+			if (PC)
+			{
+				PC->ResetIgnoreMoveInput();
+				PC->ResetIgnoreLookInput();
+				PC->SetViewTargetWithBlend(MyChar, 0.5f, EViewTargetBlendFunction::VTBlend_Cubic);
+			}
 		}
+
+		// ==========================================
+		// 🎉【新功能】：產出煮過後的資料 (_Cooked) 送回玩家背包！
+		// ==========================================
+		UInventoryComponent* Inv = CurrentInteractor->FindComponentByClass<UInventoryComponent>();
+		if (Inv)
+		{
+			for (FName ItemID : StoredIngredients)
+			{
+				// 把原本的 ID 加上 _Cooked 後綴
+				FString CookedItemName = ItemID.ToString() + TEXT("_Cooked");
+				Inv->AddIngredient(FName(*CookedItemName));
+
+				if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("🍳 烹飪完成：[%s] 已轉為 [%s] 存入背包！"), *ItemID.ToString(), *CookedItemName));
+			}
+		}
+		// ==========================================
 	}
 
-	// 執行藍圖的料理結束事件 (這會觸發你的藍圖去生成結算畫面 UI)
 	OnCookingFinished(SuccessfulQTECount);
+	UE_LOG(LogTemp, Warning, TEXT("✅ 料理結束，視角已回歸玩家，等待點擊結算畫面"));
 
-	UE_LOG(LogTemp, Warning, TEXT("料理結束，已顯示滑鼠，等待玩家點擊結算畫面"));
+	// 清除鍋子裡的生食材模型
+	for (UStaticMeshComponent* Comp : DisplayedIngredientMeshes)
+	{
+		if (Comp)
+		{
+			Comp->DestroyComponent();
+		}
+	}
+	DisplayedIngredientMeshes.Empty();
+	StoredIngredients.Empty();
 }

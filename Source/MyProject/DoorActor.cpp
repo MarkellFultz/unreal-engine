@@ -1,5 +1,5 @@
 ﻿#include "DoorActor.h"
-#include "MyCharacter.h"
+#include "MyCharacter.h" // 記得引入你的玩家類別
 #include "Kismet/GameplayStatics.h"
 
 ADoorActor::ADoorActor()

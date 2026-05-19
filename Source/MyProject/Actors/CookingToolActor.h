@@ -49,9 +49,7 @@ protected:
 	// 視覺化食材相關變數
 	UPROPERTY(EditAnywhere, Category = "Data")
 	UDataTable* IngredientDataTable;
-	// ====== 🌲 新增：鍋具配方組合表（用來判定合成什麼菜） ======
-	UPROPERTY(EditAnywhere, Category = "Data")
-	UDataTable* CookingRecipeDataTable;
+
 	// 用來記錄我們動態生成的食材模型
 	UPROPERTY()
 	TArray<UStaticMeshComponent*> DisplayedIngredientMeshes;

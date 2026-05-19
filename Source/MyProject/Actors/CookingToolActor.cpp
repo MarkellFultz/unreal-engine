@@ -38,11 +38,10 @@ FText ACookingToolActor::GetInteractPrompt() const
 
 void ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> SelectedItems)
 {
-	// 防呆：如果人死了或是一樣食材都沒選，直接退貨
 	if (!Interactor || SelectedItems.Num() == 0) return;
 
 	// ==========================================
-	// 🛑【功能保留】：安全檢測機制（支援複數食材）
+	// 🛑【新功能】：安全檢測機制
 	// 只有 IsSliceable == false 的食材才能進行烹飪互動！
 	// ==========================================
 	if (IngredientDataTable)
@@ -56,15 +55,9 @@ void ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> Sele
 				FString ErrorMsg = FString::Printf(TEXT("❌ 拒絕烹飪：[%s] 還需要切片！請先去砧板處理。"), *ItemID.ToString());
 				if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Red, ErrorMsg);
 
-				// 這裡保持你的設定：將控制權還給玩家
 				AMyCharacter* MyChar = Cast<AMyCharacter>(Interactor);
-				if (MyChar)
-				{
-					// 💡 夥伴提示：這裡保持原樣，但在藍圖 UI 的按鈕被點擊後，
-					// 建議也要做一個「關閉 UI」的動作，玩家畫面才不會卡住喔！
-					MyChar->SetUIInputMode(false);
-				}
-				return; // 直接中斷整個函數，鍋子不開伙、包包不扣東西
+				if (MyChar) MyChar->SetUIInputMode(false); // 關閉 UI 模式恢復玩家控制
+				return; // 直接中斷整個函數，不扣除也不開伙
 			}
 		}
 	}
@@ -73,20 +66,15 @@ void ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> Sele
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Red, TEXT("❌ 嚴重錯誤：廚具未綁定 IngredientDataTable，無法進行安全驗證！"));
 		return;
 	}
+	// ==========================================
 
-	// ==========================================
-	// 📦【核心改動】：一次性扣除與倒入包包（完美對撞）
-	// ==========================================
 	UInventoryComponent* Inv = Interactor->FindComponentByClass<UInventoryComponent>();
-
-	// 呼叫你的背包系統，一次扣除這陣列裡所有的食材（例如：[番茄糊, 豆腐, 青花菜]）
 	if (Inv && Inv->ConsumeIngredients(SelectedItems))
 	{
-		// 1. 把購物車所有的食材 ID，追加（Append）到鍋子的儲存陣列中，等烹飪結束拿去跟配方表對撞！
 		StoredIngredients.Append(SelectedItems);
 		CurrentInteractor = Interactor;
 
-		// 2. 【功能保留】：在鍋具上依序把複數食材的模型通通生出來！
+		// 在鍋具上動態生成並固定食材模型
 		if (IngredientDataTable)
 		{
 			for (int32 Index = 0; Index < SelectedItems.Num(); ++Index)
@@ -102,30 +90,28 @@ void ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> Sele
 						UStaticMeshComponent* NewMeshComp = NewObject<UStaticMeshComponent>(this, NAME_None);
 						NewMeshComp->RegisterComponent();
 
-						// 使用 SnapToTarget 強制將座標歸零到鍋子中心
+						// ✨【附加規則修正】：使用 SnapToTarget 強制將座標歸零到鍋子中心
 						NewMeshComp->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 						NewMeshComp->SetStaticMesh(LoadedMesh);
 
 						NewMeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 						NewMeshComp->SetGenerateOverlapEvents(false);
 
-						// 【功能保留】：食材隨機散落堆疊算法
+						// 食材隨機散落堆疊
 						float RandomX = FMath::RandRange(-15.0f, 15.0f);
 						float RandomY = FMath::RandRange(-15.0f, 15.0f);
-						// 基於 Index 進行高度疊加（Index 0 在最下面，Index 2 疊在上面）
+						// ✨【基礎高度修正】：調高到 25.0f 確保模型不會陷進鍋底
 						float ZOffset = 25.0f + (Index * 5.0f);
 
 						NewMeshComp->SetRelativeLocation(FVector(RandomX, RandomY, ZOffset));
 						NewMeshComp->SetRelativeRotation(FRotator(0.0f, FMath::RandRange(0.0f, 360.0f), 0.0f));
 
-						// 存進陣列，FinishCooking 的時候會迴圈刪除它們
 						DisplayedIngredientMeshes.Add(NewMeshComp);
 					}
 				}
 			}
 		}
 
-		// 3. 【功能保留】：鎖定玩家，融合同步運鏡
 		AMyCharacter* MyChar = Cast<AMyCharacter>(Interactor);
 		if (MyChar)
 		{
@@ -142,12 +128,12 @@ void ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> Sele
 			}
 		}
 
-		// 4. 【功能保留】：啟動隨機 QTE 烹飪機制！
 		QTECount = 0;
 		SuccessfulQTECount = 0;
 		TriggerRandomQTE();
 	}
 }
+
 void ACookingToolActor::TriggerRandomQTE()
 {
 	if (QTECount >= 3)
@@ -180,45 +166,6 @@ void ACookingToolActor::TriggerRandomQTE()
 
 void ACookingToolActor::FinishCooking()
 {
-	// 預設產出為「黑暗料理 / 失敗作」
-	FName FinalOutputItem = TEXT("Ing_RuinedFood");
-	bool bRecipeMatched = false;
-
-	// ========================================================
-	// 🌲 新增：核心配方比對邏輯（不看順序，只看材料有沒有齊）
-	// ========================================================
-	if (CookingRecipeDataTable && StoredIngredients.Num() > 0)
-	{
-		// 1. 撈出配方表裡所有的橫列 (Rows)
-		TArray<FCookingRecipeData*> AllRecipes;
-		CookingRecipeDataTable->GetAllRows<FCookingRecipeData>(TEXT("CookingMatchContext"), AllRecipes);
-
-		// 2. 將玩家目前丟進鍋子裡的食材進行「字母排序」
-		TArray<FName> SortedCurrentInput = StoredIngredients;
-		SortedCurrentInput.Sort([](const FName& A, const FName& B) { return A.ToString() < B.ToString(); });
-
-		// 3. 逐一比對每一張配方
-		for (FCookingRecipeData* Recipe : AllRecipes)
-		{
-			if (Recipe)
-			{
-				// 將配方要求的食材也進行「字母排序」
-				TArray<FName> SortedRecipeInput = Recipe->InputIngredients;
-				SortedRecipeInput.Sort([](const FName& A, const FName& B) { return A.ToString() < B.ToString(); });
-
-				// 4. 精準對撞！如果排序後的陣列完全一模一樣，代表材料全中！
-				if (SortedCurrentInput == SortedRecipeInput)
-				{
-					FinalOutputItem = Recipe->OutputItem; // 撈出對應的成功產物
-					bRecipeMatched = true;
-					break; // 找到了，直接跳出迴圈
-				}
-			}
-		}
-	}
-	// ========================================================
-
-	// 5. 結算：把做好的東西（成功料理或黑暗料理）塞進玩家背包
 	if (CurrentInteractor)
 	{
 		AMyCharacter* MyChar = Cast<AMyCharacter>(CurrentInteractor);
@@ -234,34 +181,36 @@ void ACookingToolActor::FinishCooking()
 				PC->ResetIgnoreLookInput();
 				PC->SetViewTargetWithBlend(MyChar, 0.5f, EViewTargetBlendFunction::VTBlend_Cubic);
 			}
+		}
 
-			// 塞入背包
-			UInventoryComponent* Inv = MyChar->FindComponentByClass<UInventoryComponent>();
-			if (Inv)
+		// ==========================================
+		// 🎉【新功能】：產出煮過後的資料 (_Cooked) 送回玩家背包！
+		// ==========================================
+		UInventoryComponent* Inv = CurrentInteractor->FindComponentByClass<UInventoryComponent>();
+		if (Inv)
+		{
+			for (FName ItemID : StoredIngredients)
 			{
-				Inv->AddIngredient(FinalOutputItem);
+				// 把原本的 ID 加上 _Cooked 後綴
+				FString CookedItemName = ItemID.ToString() + TEXT("_Cooked");
+				Inv->AddIngredient(FName(*CookedItemName));
 
-				// 螢幕跳出華麗的提示
-				if (GEngine)
-				{
-					FColor MsgColor = bRecipeMatched ? FColor::Green : FColor::Red;
-					FString Msg = bRecipeMatched ?
-						FString::Printf(TEXT("🍳 烹飪成功！獲得了：[%s]"), *FinalOutputItem.ToString()) :
-						FString::Printf(TEXT("💥 配方出錯！做出了黑暗料理... 獲得：[%s]"), *FinalOutputItem.ToString());
-
-					GEngine->AddOnScreenDebugMessage(-1, 6.f, MsgColor, Msg);
-				}
+				if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("🍳 烹飪完成：[%s] 已轉為 [%s] 存入背包！"), *ItemID.ToString(), *CookedItemName));
 			}
 		}
+		// ==========================================
 	}
 
-	// 觸發藍圖的結算畫面 UI 事件
 	OnCookingFinished(SuccessfulQTECount);
+	UE_LOG(LogTemp, Warning, TEXT("✅ 料理結束，視角已回歸玩家，等待點擊結算畫面"));
 
-	// 清除鍋子模型與暫存資料
+	// 清除鍋子裡的生食材模型
 	for (UStaticMeshComponent* Comp : DisplayedIngredientMeshes)
 	{
-		if (Comp) Comp->DestroyComponent();
+		if (Comp)
+		{
+			Comp->DestroyComponent();
+		}
 	}
 	DisplayedIngredientMeshes.Empty();
 	StoredIngredients.Empty();

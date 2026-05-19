@@ -20,7 +20,7 @@ public:
 	virtual FText GetInteractPrompt() const override;
 
 	// 接收食材的函數 (內部已新增 IsSliceable 驗證邏輯)
-// 把原本的 void 改成 bool
+	// 把原本的 void 改成 bool
 	UFUNCTION(BlueprintCallable, Category = "Cooking")
 	bool AcceptIngredients(AActor* Interactor, TArray<FName> SelectedItems);
 
@@ -50,9 +50,11 @@ protected:
 	// 視覺化食材相關變數
 	UPROPERTY(EditAnywhere, Category = "Data")
 	UDataTable* IngredientDataTable;
+
 	// ====== 🌲 新增：鍋具配方組合表（用來判定合成什麼菜） ======
 	UPROPERTY(EditAnywhere, Category = "Data")
 	UDataTable* CookingRecipeDataTable;
+
 	// 用來記錄我們動態生成的食材模型
 	UPROPERTY()
 	TArray<UStaticMeshComponent*> DisplayedIngredientMeshes;
@@ -79,4 +81,5 @@ protected:
 
 	// 烹飪完成的內部邏輯處理 (內部已新增產出 _Cooked 食材邏輯)
 	void FinishCooking();
+
 };

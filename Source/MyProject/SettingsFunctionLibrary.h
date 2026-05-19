@@ -75,4 +75,5 @@ public:
      */
     UFUNCTION(BlueprintPure, Category = "Game Logic|UI")
     static void GetNutritionProgressData(float Current, float Target, float& OutProgressBarRatio, FString& OutPercentageText);
+
 };

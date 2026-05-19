@@ -20,8 +20,9 @@ public:
 	virtual FText GetInteractPrompt() const override;
 
 	// 接收食材的函數 (內部已新增 IsSliceable 驗證邏輯)
+// 把原本的 void 改成 bool
 	UFUNCTION(BlueprintCallable, Category = "Cooking")
-	void AcceptIngredients(AActor* Interactor, TArray<FName> SelectedItems);
+	bool AcceptIngredients(AActor* Interactor, TArray<FName> SelectedItems);
 
 	// 打開料理 UI
 	UFUNCTION(BlueprintImplementableEvent, Category = "Cooking")

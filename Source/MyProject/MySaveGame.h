@@ -16,4 +16,7 @@ public:
 	bool bHasCompletedTutorial;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Player Settings")
 	float MouseSensitivity;
+	//  MySaveGame.h  UPROPERTY 跑计跋干硂︽
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Player Progress")
+	TMap<FName, float> LevelTimes; // Key: 闽(Cust_01), Value: 硄闽计(疊翴计)
 };

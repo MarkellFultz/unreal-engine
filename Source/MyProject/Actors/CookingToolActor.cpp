@@ -38,10 +38,19 @@ FText ACookingToolActor::GetInteractPrompt() const
 
 bool ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> SelectedItems)
 {
+<<<<<<< HEAD
 	if (!Interactor || SelectedItems.Num() == 0) return false;
 
 	// ==========================================
 	// 🛑 安全檢測機制
+=======
+	// 防呆：如果人死了或是一樣食材都沒選，直接退貨
+	if (!Interactor || SelectedItems.Num() == 0) return;
+
+	// ==========================================
+	// 🛑【功能保留】：安全檢測機制（支援複數食材）
+	// 只有 IsSliceable == false 的食材才能進行烹飪互動！
+>>>>>>> parent of 4e694b3 (關卡設定)
 	// ==========================================
 	if (IngredientDataTable)
 	{
@@ -54,6 +63,7 @@ bool ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> Sele
 				FString ErrorMsg = FString::Printf(TEXT("❌ 拒絕烹飪：[%s] 還需要切片！請先去砧板處理。"), *ItemID.ToString());
 				if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Red, ErrorMsg);
 
+<<<<<<< HEAD
 				// 2. 徹底解放玩家：把 UI 關掉，並解除所有的鎖定！
 				AMyCharacter* MyChar = Cast<AMyCharacter>(Interactor);
 				if (MyChar)
@@ -78,13 +88,42 @@ bool ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> Sele
 
 	// ==========================================
 	// 📦 扣除食材與開始料理 (這裡完全保留你的功能)
+=======
+				// 這裡保持你的設定：將控制權還給玩家
+				AMyCharacter* MyChar = Cast<AMyCharacter>(Interactor);
+				if (MyChar)
+				{
+					// 💡 夥伴提示：這裡保持原樣，但在藍圖 UI 的按鈕被點擊後，
+					// 建議也要做一個「關閉 UI」的動作，玩家畫面才不會卡住喔！
+					MyChar->SetUIInputMode(false);
+				}
+				return; // 直接中斷整個函數，鍋子不開伙、包包不扣東西
+			}
+		}
+	}
+	else
+	{
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Red, TEXT("❌ 嚴重錯誤：廚具未綁定 IngredientDataTable，無法進行安全驗證！"));
+		return;
+	}
+
+	// ==========================================
+	// 📦【核心改動】：一次性扣除與倒入包包（完美對撞）
+>>>>>>> parent of 4e694b3 (關卡設定)
 	// ==========================================
 	UInventoryComponent* Inv = Interactor->FindComponentByClass<UInventoryComponent>();
+
+	// 呼叫你的背包系統，一次扣除這陣列裡所有的食材（例如：[番茄糊, 豆腐, 青花菜]）
 	if (Inv && Inv->ConsumeIngredients(SelectedItems))
 	{
+		// 1. 把購物車所有的食材 ID，追加（Append）到鍋子的儲存陣列中，等烹飪結束拿去跟配方表對撞！
 		StoredIngredients.Append(SelectedItems);
 		CurrentInteractor = Interactor;
 
+<<<<<<< HEAD
+=======
+		// 2. 【功能保留】：在鍋具上依序把複數食材的模型通通生出來！
+>>>>>>> parent of 4e694b3 (關卡設定)
 		if (IngredientDataTable)
 		{
 			for (int32 Index = 0; Index < SelectedItems.Num(); ++Index)
@@ -98,22 +137,40 @@ bool ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> Sele
 					{
 						UStaticMeshComponent* NewMeshComp = NewObject<UStaticMeshComponent>(this, NAME_None);
 						NewMeshComp->RegisterComponent();
+<<<<<<< HEAD
+=======
+
+						// 使用 SnapToTarget 強制將座標歸零到鍋子中心
+>>>>>>> parent of 4e694b3 (關卡設定)
 						NewMeshComp->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 						NewMeshComp->SetStaticMesh(LoadedMesh);
 						NewMeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 						NewMeshComp->SetGenerateOverlapEvents(false);
 
+<<<<<<< HEAD
 						float RandomX = FMath::RandRange(-15.0f, 15.0f);
 						float RandomY = FMath::RandRange(-15.0f, 15.0f);
+=======
+						// 【功能保留】：食材隨機散落堆疊算法
+						float RandomX = FMath::RandRange(-15.0f, 15.0f);
+						float RandomY = FMath::RandRange(-15.0f, 15.0f);
+						// 基於 Index 進行高度疊加（Index 0 在最下面，Index 2 疊在上面）
+>>>>>>> parent of 4e694b3 (關卡設定)
 						float ZOffset = 25.0f + (Index * 5.0f);
 						NewMeshComp->SetRelativeLocation(FVector(RandomX, RandomY, ZOffset));
 						NewMeshComp->SetRelativeRotation(FRotator(0.0f, FMath::RandRange(0.0f, 360.0f), 0.0f));
+<<<<<<< HEAD
+=======
+
+						// 存進陣列，FinishCooking 的時候會迴圈刪除它們
+>>>>>>> parent of 4e694b3 (關卡設定)
 						DisplayedIngredientMeshes.Add(NewMeshComp);
 					}
 				}
 			}
 		}
 
+		// 3. 【功能保留】：鎖定玩家，融合同步運鏡
 		AMyCharacter* MyChar = Cast<AMyCharacter>(Interactor);
 		if (MyChar)
 		{
@@ -127,15 +184,20 @@ bool ACookingToolActor::AcceptIngredients(AActor* Interactor, TArray<FName> Sele
 			}
 		}
 
+		// 4. 【功能保留】：啟動隨機 QTE 烹飪機制！
 		QTECount = 0;
 		SuccessfulQTECount = 0;
 		TriggerRandomQTE();
+<<<<<<< HEAD
 
 		// 料理成功啟動！回傳 true，讓藍圖放心關閉 UI！
 		return true;
 	}
 
 	return false;
+=======
+	}
+>>>>>>> parent of 4e694b3 (關卡設定)
 }
 void ACookingToolActor::TriggerRandomQTE()
 {

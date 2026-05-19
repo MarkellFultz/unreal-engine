@@ -151,3 +151,16 @@ struct FIngredientData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ingredient|Gameplay")
     float BurnTimeRatio; //  (.2)
 };
+USTRUCT(BlueprintType)
+struct FCookingRecipeData : public FTableRowBase
+{
+    GENERATED_BODY()
+
+    // 輸入孔：這道菜需要哪些食材陣列（例如：[番茄糊, 切片豆腐, 切片青花菜]）
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Recipe")
+    TArray<FName> InputIngredients;
+
+    // 輸出孔：合成成功的產物 ID（例如：Dish_R005 或半成品 Ing_Tomato_Paste）
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Recipe")
+    FName OutputItem;
+};

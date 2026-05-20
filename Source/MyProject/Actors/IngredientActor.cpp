@@ -48,7 +48,7 @@ void AIngredientActor::Interact(AActor* Interactor)
 		}
 		else
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("2. no UInventoryComponent!"));
+			//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("2. no UInventoryComponent!"));
 		}
 	}
 }

@@ -46,7 +46,7 @@ void ACuttingBoardActor::Interact(AActor* Interactor)
     CurrentInteractor = Interactor;
 
     // 螢幕除錯訊息：只要你有按到砧板，畫面上一定會印出這行黃字！
-    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow, TEXT("✅ 成功觸發砧板互動 (Interact)!"));
+    //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow, TEXT("✅ 成功觸發砧板互動 (Interact)!"));
 
     switch (CurrentState)
     {
@@ -55,7 +55,7 @@ void ACuttingBoardActor::Interact(AActor* Interactor)
         break;
     case ECuttingState::Aiming:
     case ECuttingState::ReadyToCollect:
-        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Cyan, TEXT("✅ 進入拾取流程..."));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Cyan, TEXT("✅ 進入拾取流程..."));
         CollectIngredients();
         break;
     }
@@ -66,7 +66,7 @@ void ACuttingBoardActor::CollectIngredients()
     // 如果沒有互動者，印出紅字錯誤
     if (!CurrentInteractor)
     {
-        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("❌ 錯誤：找不到互動的玩家！"));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("❌ 錯誤：找不到互動的玩家！"));
         return;
     }
 
@@ -91,12 +91,12 @@ void ACuttingBoardActor::CollectIngredients()
         CurrentState = ECuttingState::Idle;
         CurrentInteractor = nullptr;
 
-        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("✅ 成功拾取！食材已放入背包，砧板重置。"));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("✅ 成功拾取！食材已放入背包，砧板重置。"));
     }
     else
     {
         // 如果找不到背包，印出紅字錯誤
-        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("❌ 錯誤：玩家身上沒有 InventoryComponent 背包組件！"));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("❌ 錯誤：玩家身上沒有 InventoryComponent 背包組件！"));
     }
 }
 
@@ -112,18 +112,18 @@ void ACuttingBoardActor::PlaceIngredient(FName IngredientID, AActor* Interactor)
     // ==========================================
     // 偵錯第一關：確認 UI 有沒有成功呼叫這個函數？傳來的 ID 是什麼？
     // ==========================================
-    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Yellow, FString::Printf(TEXT("👉 收到放入請求！準備放入: %s"), *IngredientID.ToString()));
+    //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Yellow, FString::Printf(TEXT("👉 收到放入請求！準備放入: %s"), *IngredientID.ToString()));
 
     // 偵錯第二關：檢查資料表有沒有設定？
     if (!IngredientDataTable)
     {
-        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, TEXT("❌ 嚴重錯誤：資料表遺失！請打開 BP_CuttingBoard 重新設定 IngredientDataTable！"));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, TEXT("❌ 嚴重錯誤：資料表遺失！請打開 BP_CuttingBoard 重新設定 IngredientDataTable！"));
         return;
     }
 
     if (CurrentState != ECuttingState::Idle)
     {
-        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, TEXT("❌ 錯誤：砧板目前不是 Idle 狀態，無法放入！"));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, TEXT("❌ 錯誤：砧板目前不是 Idle 狀態，無法放入！"));
         return;
     }
 
@@ -132,7 +132,7 @@ void ACuttingBoardActor::PlaceIngredient(FName IngredientID, AActor* Interactor)
     // 偵錯第三關：資料表裡找得到這個 ID 嗎？
     if (!Data)
     {
-        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, FString::Printf(TEXT("❌ 錯誤：在 CSV 資料表中找不到這個 ID: %s"), *IngredientID.ToString()));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, FString::Printf(TEXT("❌ 錯誤：在 CSV 資料表中找不到這個 ID: %s"), *IngredientID.ToString()));
         return;
     }
 
@@ -142,7 +142,7 @@ void ACuttingBoardActor::PlaceIngredient(FName IngredientID, AActor* Interactor)
 
         if (!Data->IsSliceable)
         {
-            if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Orange, TEXT("⚠️ 提示：這個食材不需要切！"));
+            //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Orange, TEXT("⚠️ 提示：這個食材不需要切！"));
             if (MyChar) MyChar->SetUIInputMode(false);
             return;
         }
@@ -154,7 +154,7 @@ void ACuttingBoardActor::PlaceIngredient(FName IngredientID, AActor* Interactor)
             {
                 // 如果是這裡失敗，我們之前已經有寫紅字警告了
                 FString ErrorMsg = FString::Printf(TEXT("❌ 扣除失敗：背包找不到 [%s]！"), *IngredientID.ToString());
-                if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, ErrorMsg);
+                //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, ErrorMsg);
                 return;
             }
         }
@@ -162,7 +162,7 @@ void ACuttingBoardActor::PlaceIngredient(FName IngredientID, AActor* Interactor)
         // ==========================================
         // 如果能走到這裡，代表前面的檢查全部過關！
         // ==========================================
-        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("✅ 檢查通過！開始生成模型與切換視角..."));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("✅ 檢查通過！開始生成模型與切換視角..."));
 
         CurrentIngredientID = IngredientID;
         CutCount = 0;

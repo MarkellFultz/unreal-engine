@@ -224,7 +224,7 @@ void AMyCharacter::CheckRecipeIngredients(TArray<FName> CurrentInventory, TArray
     if (RequiredIngredients.Num() == 0)
     {
         bCanEnterCookingStage = false;
-        if (GEngine) GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Red, TEXT("❌ 錯誤：食譜沒有設定任何必要食材！"));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Red, TEXT("❌ 錯誤：食譜沒有設定任何必要食材！"));
         return;
     }
 
@@ -253,11 +253,11 @@ void AMyCharacter::CheckRecipeIngredients(TArray<FName> CurrentInventory, TArray
     // 印出超詳細的偵錯文字，讓你知道到底發生了什麼事
     if (bHasAllIngredients)
     {
-        if (GEngine) GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Green, TEXT("✅ 食譜所需食材已全數集齊！大門解鎖！"));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Green, TEXT("✅ 食譜所需食材已全數集齊！大門解鎖！"));
     }
     else
     {
         // 如果沒齊，會精準印出還差哪幾個食材
-        if (GEngine) GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Orange, FString::Printf(TEXT("⚠️ 尚未達標！還缺少食材: %s"), *MissingItems));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Orange, FString::Printf(TEXT("⚠️ 尚未達標！還缺少食材: %s"), *MissingItems));
     }
 }

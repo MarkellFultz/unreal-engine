@@ -81,5 +81,8 @@ protected:
 
 	// 烹飪完成的內部邏輯處理 (內部已新增產出 _Cooked 食材邏輯)
 	void FinishCooking();
+	// 🌟🌟🌟 新增：專門給盤子使用的料理完成事件 🌟🌟🌟
+	UFUNCTION(BlueprintImplementableEvent, Category = "Cooking")
+	void OnPlateDishCompleted(FName DishName);
 
 };

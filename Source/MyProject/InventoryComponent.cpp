@@ -50,13 +50,13 @@ bool UInventoryComponent::RemoveIngredient(FName ItemID)
         InventoryItems.RemoveSingle(ItemID);
 
         // 使用英文印出成功訊息，避免編碼問題
-        if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, FString::Printf(TEXT("Success! Removed: %s"), *ItemID.ToString()));
+        //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, FString::Printf(TEXT("Success! Removed: %s"), *ItemID.ToString()));
         OnInventoryChanged.Broadcast();
         return true;
     }
 
     // 3. 如果沒有，先印出我們「試圖尋找卻找不到」的 ID
-    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, FString::Printf(TEXT("Failed! Cannot find: [%s]"), *ItemID.ToString()));
+    //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Red, FString::Printf(TEXT("Failed! Cannot find: [%s]"), *ItemID.ToString()));
 
     // 4. 【透視鏡功能】：把背包裡目前所有的東西都印出來讓我們檢查！
     FString InventoryList = TEXT("Current Inventory Contains: ");
@@ -73,7 +73,7 @@ bool UInventoryComponent::RemoveIngredient(FName ItemID)
     }
 
     // 印出黃色的背包清單
-    if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, InventoryList);
+    //if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, InventoryList);
 
     return false;
 }
